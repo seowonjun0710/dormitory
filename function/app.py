@@ -194,6 +194,9 @@ def check_csrf():
     if "_csrf" not in session:
         session["_csrf"] = secrets.token_urlsafe(32)
 
+    if request.path == "/api/cctv/upload":
+        return
+
     if request.method in ("POST", "PUT", "PATCH", "DELETE"):
         submitted = (
             request.headers.get("X-CSRF-Token")
@@ -1490,6 +1493,102 @@ def init_cctv_db():
 
 
 init_cctv_db()
+
+
+
+
+@app.route("/api/cctv/upload", methods=["POST"])
+def upload_cctv():
+    
+    expected_key = os.environ.get("CCTV_UPLOAD_KEY", "")
+    received_key = request.headers.get("X-CCTV-Key", "")
+
+    if not expected_key or not hmac.compare_digest(
+        expected_key, received_key
+    ):
+        abort(403)
+
+    
+    if request.content_length and request.content_length > 50 * 1024 * 1024:
+        abort(413)
+
+    request.max_content_length = 50 * 1024 * 1024
+
+    video = request.files.get("video")
+
+    if video is None or not video.filename:
+        return jsonify({
+            "success": False,
+            "message": "영상 파일이 없습니다."
+        }), 400
+
+    if Path(video.filename).suffix.lower() != ".mp4":
+        return jsonify({
+            "success": False,
+            "message": "MP4 파일만 허용합니다."
+        }), 400
+
+    try:
+        start = datetime.fromisoformat(
+            request.form["start_time"]
+        )
+        end = datetime.fromisoformat(
+            request.form["end_time"]
+        )
+
+        if start.tzinfo is None or end.tzinfo is None:
+            raise ValueError("시간대 정보 없음")
+
+        if end < start:
+            raise ValueError("시간 순서 오류")
+
+    except (KeyError, ValueError):
+        return jsonify({
+            "success": False,
+            "message": "감지 시간이 올바르지 않습니다."
+        }), 400
+
+    
+    filename = f"person_{secrets.token_hex(12)}.mp4"
+    path = CAPTURE_DIR / filename
+
+    try:
+        video.save(path)
+
+        if path.stat().st_size == 0:
+            raise ValueError("빈 영상 파일")
+
+        expires_at = end.timestamp() + 72 * 3600
+
+        db = get_db()
+        cursor = db.execute("""
+            INSERT INTO cctv_events
+            (filename, event_type, start_time, end_time, expires_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            filename,
+            "person",
+            start.isoformat(),
+            end.isoformat(),
+            expires_at
+        ))
+
+        db.commit()
+
+    except Exception:
+        path.unlink(missing_ok=True)
+        app.logger.exception("CCTV 업로드 실패")
+
+        return jsonify({
+            "success": False,
+            "message": "영상 저장에 실패했습니다."
+        }), 500
+
+    return jsonify({
+        "success": True,
+        "video_id": cursor.lastrowid,
+        "message": "영상 업로드 완료"
+    }), 201
 
 
 
