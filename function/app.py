@@ -1718,11 +1718,13 @@ def delete_student_account(user_id):
 
 
 
+
 def create_render_admin():
     username = os.environ.get("ADMIN_USERNAME")
     password = os.environ.get("ADMIN_PASSWORD")
 
     if not username or not password:
+        print("관리자 환경변수가 설정되지 않았습니다.")
         return
 
     with sqlite3.connect(DB_PATH) as db:
@@ -1731,19 +1733,24 @@ def create_render_admin():
             (username,)
         ).fetchone()
 
+        password_hash = generate_password_hash(password)
+
         if existing:
+            print("이미 존재하는 관리자 아이디입니다.")
             return
 
         db.execute("""
             INSERT INTO users
-            (username, password_hash, role, active)
-            VALUES (?, ?, 'admin', 1)
+            (username, gender, password_hash, role, active)
+            VALUES (?, ?, ?, 'admin', 1)
         """, (
             username,
-            generate_password_hash(password)
+            "미지정",
+            password_hash
         ))
 
         db.commit()
+        print("Render 관리자 계정 생성 완료")
 
 
 create_render_admin()
