@@ -6,7 +6,7 @@ from ultralytics import YOLO
 import sqlite3
 import subprocess
 import os
-
+import requests
 
 PERSON_CONF = 0.5
 CAPTURE_INTERVAL = 2.0
@@ -192,6 +192,71 @@ def convert_to_h264(original_path):
 
 
 
+CCTV_SERVER_URL = os.environ.get(
+    "CCTV_SERVER_URL", ""
+)
+CCTV_UPLOAD_KEY = os.environ.get(
+    "CCTV_UPLOAD_KEY", ""
+)
+
+
+def upload_cctv_event(event, video_path):
+    if not CCTV_SERVER_URL or not CCTV_UPLOAD_KEY:
+        print("Render 연결 설정이 없습니다.")
+        return False
+
+    path = Path(video_path)
+
+    if not path.is_file():
+        print("업로드할 영상이 없습니다.")
+        return False
+
+    
+    start = datetime.fromisoformat(
+        event["start_time"]
+    ).astimezone()
+
+    end = datetime.fromisoformat(
+        event["end_time"]
+    ).astimezone()
+
+    try:
+        with path.open("rb") as file:
+            response = requests.post(
+                CCTV_SERVER_URL.rstrip("/")
+                + "/api/cctv/upload",
+
+                headers={
+                    "X-CCTV-Key": CCTV_UPLOAD_KEY
+                },
+
+                data={
+                    "start_time": start.isoformat(),
+                    "end_time": end.isoformat()
+                },
+
+                files={
+                    "video": (
+                        path.name,
+                        file,
+                        "video/mp4"
+                    )
+                },
+
+                timeout=120
+            )
+
+        response.raise_for_status()
+
+        print("Render 영상 업로드 성공")
+        return True
+
+    except requests.RequestException as error:
+        print("Render 영상 업로드 실패:", error)
+        return False
+
+
+
 def stop_recording():
     global recording, writer, start_time
     global last_capture_time, video_path
@@ -229,6 +294,7 @@ def stop_recording():
 
     if conversion_success:
         register_cctv_event(event)
+        upload_cctv_event(event, video_path)
     else:
         print("변환에 실패하여 DB에 등록하지 않았습니다.")
         print("원본 영상은 captures 폴더에 남아 있습니다.")
