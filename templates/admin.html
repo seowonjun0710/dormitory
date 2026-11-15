@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dormitory Admin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='gacha.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='admin.js') }}" defer></script>
+</head>
+<body>
+    <div class="dashboard">
+        <header>
+            <div>
+                <h1>Dormitory Admin</h1>
+                <p>관리자 통합 관리 포털</p>
+            </div>
+            <button onclick="logout()">로그아웃</button>
+        </header>
+
+        <nav id="top-nav">
+            <button class="active" onclick="showSection('points', this)">상벌점 관리</button>
+            <button onclick="showSection('appeals', this)">벌점 이의제기</button>
+            <button onclick="showSection('repairs', this)">수리 관리</button>
+            <button onclick="showSection('cctv', this)">CCTV 관리</button>
+            <button onclick="showSection('rooms', this)">방 배정</button>
+            <button onclick="showSection('users', this)">계정 관리</button>
+        </nav>
+
+        <main>
+
+            <section id="sec-points" class="admin-section">
+                <div class="menu-card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <h3 style="border:none; padding:0; margin:0;">최근 30일 상점 1위</h3>
+                        <div id="points-ranking-area" style="margin-top:6px; font-size:14px; color:#374151;">
+                            불러오는 중...
+                        </div>
+                    </div>
+                    <button onclick="loadPointsRanking()" style="padding:7px 14px; font-size:13px;">순위 새로고침</button>
+                </div>
+
+                <div class="menu-card">
+                    <h3>학생별 상벌점 전체 조회</h3>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px;">
+                        <input type="text" id="search-point-username" placeholder="조회할 학생 아이디 (username)" style="max-width:260px; margin:0;" onkeydown="if(event.key==='Enter') searchStudentPoints()">
+                        <button onclick="searchStudentPoints()">내역 조회</button>
+                    </div>
+                    <div id="student-points-result"></div>
+                </div>
+
+                <div class="menu-card">
+                    <h3>상벌점 부여</h3>
+                    <label for="pt-username">학생 아이디</label>
+                    <input type="text" id="pt-username" placeholder="예: 1101">
+
+                    <label for="pt-type">구분</label>
+                    <select id="pt-type">
+                        <option value="penalty">벌점</option>
+                        <option value="reward">상점</option>
+                    </select>
+
+                    <label for="pt-amount">점수</label>
+                    <input type="number" id="pt-amount" min="1" max="100" value="1">
+
+                    <label for="pt-reason">사유</label>
+                    <input type="text" id="pt-reason" maxlength="500" placeholder="예: 기숙사 규칙 위반, 청소 우수 등">
+
+                    <button onclick="givePoint()" style="margin-top: 14px;">등록하기</button>
+                </div>
+
+                <div class="menu-card">
+                    <h3>전체 상벌점 내역 (<span id="points-count">0</span>건)</h3>
+                    <div id="points-list-area"></div>
+                </div>
+            </section>
+
+            <section id="sec-appeals" class="admin-section" style="display:none;">
+                <h2>벌점 이의제기 목록 (<span id="appeals-count">0</span>건)</h2>
+                <div id="appeals-list-area"></div>
+            </section>
+
+            <section id="sec-repairs" class="admin-section" style="display:none;">
+                <h2>수리 대기 목록 (<span id="repairs-count">0</span>건)</h2>
+                <div id="repairs-list-area"></div>
+            </section>
+
+            <section id="sec-cctv" class="admin-section" style="display:none;">
+                <div class="menu-card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <h3 style="border:none; padding:0; margin:0;">CCTV AI 감지 영상 (<span id="cctv-count">0</span>건)</h3>
+                        <p style="margin:4px 0 0; font-size:13.5px; color:#6b7280;">행동 종료 시점으로부터 72시간 동안 보관되며 이후 자동 삭제됩니다.</p>
+                    </div>
+                    <button onclick="loadCctvVideos()">새로고침</button>
+                </div>
+
+                <div id="cctv-player-card" class="menu-card" style="display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h3 id="cctv-player-title" style="border:none; padding:0; margin:0;">영상 재생</h3>
+                        <button onclick="closeCctvPlayer()" style="background:#6b7280;">닫기</button>
+                    </div>
+                    <video id="cctv-video-player" controls style="width:100%; max-height:460px; border-radius:8px; background:#000;"></video>
+                </div>
+
+                <div class="menu-card">
+                    <div id="cctv-list-area"></div>
+                </div>
+            </section>
+
+            <section id="sec-rooms" class="admin-section" style="display:none;">
+                
+                <div class="menu-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <h3 style="border:none; padding:0; margin:0;">기숙사 방 배정 관리</h3>
+                            <p style="margin:4px 0 0; font-size:13.5px; color:#6b7280;">전체 배정 또는 학년·성별(6개 그룹)별로 따로 랜덤 방 배정을 실행합니다.</p>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button onclick="resetRooms()" style="background:#dc2626;">배정 초기화</button>
+                        </div>
+                    </div>
+
+                    
+                    <div style="margin-top:14px; padding-top:14px; border-top:1px solid #e5e7eb;">
+                        <p style="margin:0 0 8px; font-size:13px; font-weight:600; color:#374151;">학년·성별 개별 랜덤 배정</p>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(145px, 1fr)); gap:8px;">
+                            <button class="btn-group-allocate" onclick="runGroupRoomAllocation(1, '남', this)" style="background:#2563eb; font-size:10px; padding:7px 10px;">
+                                1학년 남학생 배정
+                            </button>
+                            <button class="btn-group-allocate" onclick="runGroupRoomAllocation(2, '남', this)" style="background:#2563eb; font-size:10px; padding:7px 8px;">
+                                2학년 남학생 배정
+                            </button>
+                            <button class="btn-group-allocate" onclick="runGroupRoomAllocation(3, '남', this)" style="background:#2563eb; font-size:10px; padding:7px 8px;">
+                                3학년 남학생 배정
+                            </button>
+                            <button class="btn-group-allocate" onclick="runGroupRoomAllocation(1, '여', this)" style="background:#db2777; font-size:10px; padding:7px 8px;">
+                                1학년 여학생 배정
+                            </button>
+                            <button class="btn-group-allocate" onclick="runGroupRoomAllocation(2, '여', this)" style="background:#db2777; font-size:10px; padding:7px 8px;">
+                                2학년 여학생 배정
+                            </button>
+                            <button class="btn-group-allocate" onclick="runGroupRoomAllocation(3, '여', this)" style="background:#db2777; font-size:10px; padding:7px 8px;">
+                                3학년 여학생 배정
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="menu-card">
+                    <h3>방 추가</h3>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <input type="text" id="new-room-number" placeholder="새 호실 번호 (예: 105)" style="max-width:220px; margin:0;">
+                        <input type="number" id="new-room-capacity" value="4" min="1" max="10" placeholder="정원" style="max-width:100px; margin:0;">
+                        <button onclick="addRoom()">방 추가</button>
+                    </div>
+                </div>
+
+                
+                <p id="rooms-info-msg" style="font-size:13px; color:#6b7280; margin-bottom:12px; display:none;"></p>
+                <div id="room-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px; margin-bottom:20px;"></div>
+
+                
+                <div class="menu-card">
+                    <h3>학생 방 교환</h3>
+                    <p style="font-size:13px; color:#6b7280; margin-bottom:10px;">활성 학생 두 명을 선택해 서로의 방을 맞바꿉니다.</p>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <select id="swap-student-1" style="flex:1; min-width:180px;"></select>
+                        <span style="font-weight:bold;">↔</span>
+                        <select id="swap-student-2" style="flex:1; min-width:180px;"></select>
+                        <button onclick="swapStudentRooms()">방 교환 실행</button>
+                    </div>
+                </div>
+
+                
+                <div class="menu-card">
+                    <h3>같은 방 배정 금지 학생 쌍 관리</h3>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px;">
+                        <select id="excl-student-1" style="flex:1; min-width:180px;"></select>
+                        <span style="font-weight:bold;">×</span>
+                        <select id="excl-student-2" style="flex:1; min-width:180px;"></select>
+                        <button onclick="addExclusion()">금지 쌍 추가</button>
+                    </div>
+                    <div id="exclusions-list-area"></div>
+                </div>
+
+            </section>
+
+            
+            <section id="sec-users" class="admin-section" style="display:none;">
+                <div class="menu-card">
+                    <h3>학생 계정 관리 (<span id="users-count">0</span>명)</h3>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px;">
+                        <input type="text"
+                               id="search-user-student-id"
+                               placeholder="학번 검색 (예: 1101)"
+                               maxlength="4"
+                               oninput="filterStudentUsers()"
+                               style="max-width:240px; margin:0;">
+                        <button onclick="resetUserSearch()" style="background:#6b7280;">전체 보기</button>
+                    </div>
+                    <div id="users-list-area"></div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</body>
+</html>

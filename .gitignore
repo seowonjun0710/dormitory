@@ -1,0 +1,7 @@
+.flask_secret
+database.db
+captures/
+.env
+__pycache__/
+*.pyc
+yolov8n.pt

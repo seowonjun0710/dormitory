@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dormitory Student</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='students.js') }}" defer></script>
+</head>
+<body>
+    <div class="dashboard">
+
+        
+        <header>
+            <div>
+                <h1>Dormitory Student</h1>
+                <p>학생 기숙사 포털 ({{ username }})</p>
+            </div>
+            <button onclick="logout()">로그아웃</button>
+        </header>
+
+        
+        <nav id="top-nav">
+            <button class="active" onclick="showSection('points', this)">상벌점 / 이의제기</button>
+            <button onclick="showSection('repairs', this)">시설 수리 신고</button>
+            <button onclick="showSection('rooms', this)">방 배정 확인</button>
+        </nav>
+
+        
+        <main>
+
+            
+            <section id="sec-points" class="student-section">
+                <div class="menu-card">
+                    <h3>1. 내 상벌점 내역</h3>
+                    <div id="student-points-area"></div>
+                </div>
+
+                <div class="menu-card">
+                    <h3>2. 벌점 이의제기 신청</h3>
+                    <div id="student-appeal-form-area"></div>
+                </div>
+
+                <div class="menu-card">
+                    <h3>3. 내 이의제기 신청 내역</h3>
+                    <div id="student-appeals-area"></div>
+                </div>
+            </section>
+
+            <!-- 4-2. 시설 수리 신고 -->
+            <section id="sec-repairs" class="student-section" style="display:none;">
+                <div class="menu-card">
+                    <h3>1. 시설 수리 신고</h3>
+                    <label for="rep-room">호실</label>
+                    <input type="text" id="rep-room" maxlength="30" placeholder="예: 201호">
+
+                    <label for="rep-student-number">학번</label>
+                    <input type="text" id="rep-student-number" maxlength="20" placeholder="예: 2416">
+
+                    <label for="rep-name">이름</label>
+                    <input type="text" id="rep-name" maxlength="40" placeholder="예: 홍길동">
+
+                    <label for="rep-description">고장 내용</label>
+                    <textarea id="rep-description" rows="3" maxlength="2000" placeholder="고장 부위와 증상을 구체적으로 작성하세요."></textarea>
+
+                    <button onclick="submitRepair()" style="margin-top: 14px;">수리 요청 제출</button>
+                </div>
+
+                <div class="menu-card">
+                    <h3>2. 내 수리 요청 내역 (<span id="student-repairs-count">0</span>건)</h3>
+                    <div id="student-repairs-area"></div>
+                </div>
+            </section>
+
+            <section id="sec-rooms" class="student-section" style="display:none;">
+                <div class="menu-card" style="text-align:center; padding:32px 20px;">
+                    {% if room_number %}
+                        <h3 style="border:none; margin-bottom:8px;">내 배정 호실: <span style="color:#52b7ad;">{{ room_number }}호</span></h3>
+                        <p style="color:#6b7280; font-size:14px; margin:0;">
+                            기숙사 방 배정이 완료되었습니다. 배정된 호실을 확인해 주세요.
+                        </p>
+                    {% else %}
+                        <h3 style="border:none; margin-bottom:8px;">아직 방 배정이 완료되지 않았습니다</h3>
+                        <p style="color:#6b7280; font-size:14px; margin:0;">
+                            관리자가 기숙사 방 배정을 진행 중입니다. 배정이 완료되면 이곳에서 배정된 호실을 확인할 수 있습니다.
+                        </p>
+                    {% endif %}
+                </div>
+            </section>
+
+        </main>
+    </div>
+</body>
+</html>
