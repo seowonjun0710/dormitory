@@ -3,7 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from pathlib import Path
 from datetime import datetime
-from randomroom import allocate_rooms_logic,prepare_allocation, save_allocation, get_room_numbers, add_room, rename_room, delete_room, reset_room_allocation, swap_student_rooms, get_room_exclusions, add_room_exclusion, delete_room_exclusion, clear_room_exclusions, get_grade
+from function.randomroom import allocate_rooms_logic,prepare_allocation, save_allocation, get_room_numbers, add_room, rename_room, delete_room, reset_room_allocation, swap_student_rooms, get_room_exclusions, add_room_exclusion, delete_room_exclusion, clear_room_exclusions, get_grade
 import sqlite3
 import secrets
 import hmac
