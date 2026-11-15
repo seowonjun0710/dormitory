@@ -11,6 +11,7 @@ import re
 import sys
 import time
 import threading
+import os
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent   
@@ -1714,6 +1715,38 @@ def delete_student_account(user_id):
         )
     })
 
+
+
+
+def create_render_admin():
+    username = os.environ.get("ADMIN_USERNAME")
+    password = os.environ.get("ADMIN_PASSWORD")
+
+    if not username or not password:
+        return
+
+    with sqlite3.connect(DB_PATH) as db:
+        existing = db.execute(
+            "SELECT id FROM users WHERE username = ?",
+            (username,)
+        ).fetchone()
+
+        if existing:
+            return
+
+        db.execute("""
+            INSERT INTO users
+            (username, password_hash, role, active)
+            VALUES (?, ?, 'admin', 1)
+        """, (
+            username,
+            generate_password_hash(password)
+        ))
+
+        db.commit()
+
+
+create_render_admin()
 
 
 
